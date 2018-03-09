@@ -60,6 +60,7 @@ func main() {
 	)
 
 	r := mux.NewRouter()
+	r.StrictSlash(false)
 	r.HandleFunc("/", IndexHandle)
 	r.HandleFunc("/ws", hub.ServeWebsocket)
 	r.PathPrefix("/public/").Handler(http.StripPrefix("/public/", http.FileServer(http.Dir("./public"))))

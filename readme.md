@@ -5,6 +5,8 @@
 这是自go语言进入我的视野以来第一个有可能实现商业化的项目，但是在这个初级版本上还是开源出来，希望有兴趣的朋友们一起来玩！
 ![](https://i.loli.net/2018/03/09/5aa202d2d7263.jpeg)
 
+![](https://i.loli.net/2018/03/09/5aa225fd6dfa6.jpeg)
+
 # Install
 
 安装非常简单，直接build即可。
@@ -13,7 +15,9 @@
 运行服务端后，直接输入：
 
 ```
-http://localhost:8080/public
+http://localhost:8080/public/
 ```
 即可进入聊天室，每个人都可以设置自己的用户名哦！
-或者手动点击 `public/index.html` 即可
+或者手动点击 `public/index.html` 即可.
+
+**但是怎么让其他客户端进入的时候自动连接某个ip呢？这是个问题。也就说如何动态给html传入参数？**

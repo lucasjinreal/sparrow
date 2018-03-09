@@ -28,6 +28,8 @@
         var inputName = document.getElementById("input_name");
 
         var fromUserName = "小王";
+        var wsAddress = "localhost:8080";
+        var conn;
 
         var roomId;
 
@@ -90,7 +92,7 @@
         }
 
         // ======================== do websocket setup ===================
-        conn = new WebSocket("ws://localhost:8080/ws");
+        conn = new WebSocket("ws://" + wsAddress + "/ws");
         conn.onopen = function (ev) {
             appendMessage("<span class=\"badge badge-pill badge-success\">已连接</span><p></p>");
             console.log(ev.toString());
@@ -100,7 +102,7 @@
             });
         };
         conn.onerror = function (ev) {
-            appendMessage("<span class=\"badge badge-pill badge-danger\">未连接</span>\n");
+            appendMessage("<span class=\"badge badge-pill badge-danger\">未连接: " +  ev.toString() + "</span>\n");
             console.log(ev.toString());
         };
         conn.onmessage = function (evt) {
@@ -172,7 +174,20 @@
         });
         inputName.addEventListener('blur', function (event) {
             changeFromUserName();
-        })
+        });
+        inputIp.addEventListener('keyup', function (event) {
+            if (event.which === 13) {
+                if (inputIp.value !== "") {
+                    conn = new WebSocket("ws://" + inputIp.value + "/ws");
+                }
+            }
+        });
+        inputIp.addEventListener('blur', function (event) {
+            if (inputIp.value !== "") {
+                conn = new WebSocket("ws://" + inputIp.value + "/ws");
+            }
+        });
+
     }
 
 </script>
