@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>吉克斯贝斯聊天室</title>
+    <link href="css/home.css" type="text/css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link rel="stylesheet" href="css/shards.min.css">
+    <script src="js/shards.js" type="text/javascript"></script>
+</head>
+
+<body>
+<div id="log" class="card">
+    <div class="card-body">聊天内容</div>
+</div>
+<form id="form">
+    <button id="send" type="button" class="btn btn-primary btn-pill">发送</button>
+    <input type="text" id="msg" size="64"/>
+</form>
+</body>
+
+<script type="text/javascript">
+    window.onload = function () {
+        var conn;
+        var roomId;
+        var msg = document.getElementById("msg");
+        var log = document.getElementById("log");
+
+        function appendLog(content) {
+            var item = document.createElement("div");
+            item.innerHTML = content;
+
+            var doScroll = log.scrollTop > log.scrollHeight - log.clientHeight - 1;
+            log.appendChild(item);
+            if (doScroll) {
+                log.scrollTop = log.scrollHeight - log.clientHeight;
+            }
+        }
+
+        function sendMessage(msg, typ) {
+            if (typ) {
+                msg.type = typ
+            }
+            if (roomId) {
+                msg.room = roomId
+            }
+            msg.from = "法克鱿"
+            console.log("send:", JSON.stringify(msg));
+            conn.send(JSON.stringify(msg));
+        }
+
+        document.getElementById("form").onsubmit = function () {
+            if (!conn) {
+                return false;
+            }
+            if (!msg.value) {
+                return false;
+            }
+
+            sendMessage({
+                data: msg.value,
+                type: 'MESSAGE',
+            });
+            msg.value = "";
+            return false;
+        };
+
+        if (window["WebSocket"]) {
+            conn = new WebSocket("ws://localhost:8080/ws");
+            conn.onerror = function (evt) {
+                console.error(`error: ${evt}`)
+                appendLog(`<b>Error: ${JSON.stringify(evt)}.</b>`);
+            };
+
+            conn.onopen = function (evt) {
+                console.log(`connected: ${JSON.stringify(evt)}`);
+                appendLog("<b>Connection created.</b>");
+
+                // get room list
+                sendMessage({
+                    type: 'ROOMS',
+                });
+            };
+
+            conn.onclose = function (evt) {
+                console.log(`closed: ${JSON.stringify(evt)}`);
+                var item = document.createElement("div");
+                item.innerHTML = "<b>Connection closed.</b>";
+                appendLog(item);
+            };
+
+            conn.onmessage = function (evt) {
+                var message = JSON.parse(evt.data);
+                if (message.type === 'ROOMS') {
+                    if (message.data.length) {
+                        rooms = JSON.parse(message.data)
+                        rooms.forEach(function (room) {
+                            appendLog(`<b>${room.name}</b> : ${JSON.stringify(room)}`);
+                        })
+
+                        sendMessage({
+                            type: 'JOIN',
+                            room: rooms[0].id,
+                        });
+
+                    }
+                    return
+                }
+
+                if (message.type === 'JOIN') {
+                    if (message.data) {
+                        roomId = message.data;
+                        var date = message.timestamp ? new Date(message.timestamp) : new Date();
+                        appendLog(`<b>${date.toLocaleString()}</b> : Joined room ${message.data}`);
+                    } else {
+                        appendLog(`Failed to joined room <b>${message.data}</b>`);
+                    }
+                    return
+                }
+
+                if (message.data) {
+                    console.log(`recv: ${JSON.stringify(message)}`);
+                    var date = new Date(message.timestamp);
+                    var text = `<b>${date.toLocaleString()}</b> : ${message.from} : ${message.data}`;
+                    appendLog(text);
+                } else {
+                    console.error(`recv: empty(${JSON.stringify(evt)})`);
+                }
+            };
+        } else {
+            appendLog("<b>Your browser does not support WebSockets.</b>");
+        }
+    };
+</script>
+
+</html>
