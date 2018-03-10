@@ -35,7 +35,7 @@ func init() {
 
 func main() {
 	var addr string
-	flag.StringVar(&addr, "addr", ":8080", "http service address")
+	flag.StringVar(&addr, "addr", ":9090", "http service address")
 	flag.Parse()
 
 	cg.PrintlnGreen("=> Starting sparrow, serves all the messages...")
