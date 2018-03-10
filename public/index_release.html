@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <title>私密聊天室</title>
+    <meta name="description" content="私密聊天室">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="css/bootstrap.css">
+    <link rel="stylesheet" href="css/bootstrap-grid.css">
+    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet"
+          integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
+    <link rel="stylesheet" href="css/shards.min.css">
+    <link rel="stylesheet" href="css/shards-demo.css?v=1.1.0">
+    <link rel="stylesheet" href="css/index.css">
+    <script src="http://code.jquery.com/jquery-3.3.1.min.js"
+            integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+</head>
+
+<script type="text/javascript">
+    window.onload = function (ev) {
+        var btnSend = document.getElementById("send");
+        var contentArea = document.getElementById("content");
+        var msgTextArea = document.getElementById("msgTextArea");
+
+        var inputIp = document.getElementById("input_ip");
+        var inputName = document.getElementById("input_name");
+
+        var fromUserName = "小王";
+        var wsAddress = "112.74.76.245:9090";
+        var conn;
+
+        var roomId;
+
+        // ======================= functions =====================
+        function GetCookie(name) {
+            var cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                var cookies = document.cookie.split(';');
+                for (var i = 0; i < cookies.length; i++) {
+                    var cookie = jQuery.trim(cookies[i]);
+                    // Does this cookie string begin with the name we want?
+                    if (cookie.substring(0, name.length + 1) == (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        function SetCookie(name, value, days) {
+            var expires = "";
+            if (days) {
+                var date = new Date();
+                date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+                expires = "; expires=" + date.toUTCString();
+            }
+            document.cookie = name + "=" + value + expires + "; path=/";
+        }
+
+        function appendMessage(content) {
+            contentArea.innerHTML += content;
+        }
+
+        function sendMessage(msg, typ) {
+            if (typ) {
+                msg.type = typ
+            }
+            if (roomId) {
+                msg.room = roomId
+            }
+            // TODO: get user name from cookies
+            msg.from = fromUserName;
+            console.log("send:", JSON.stringify(msg));
+            conn.send(JSON.stringify(msg));
+        }
+
+        function changeFromUserName() {
+            console.log("失去了焦点");
+            console.log(inputName.value);
+            fromUserName = inputName.value;
+            console.log(fromUserName);
+        }
+
+        // ======================== get from username from cookies =============
+        fromUserName = GetCookie("fromUserName");
+        if (fromUserName == null) {
+            // open a dialog input from user name, and set it to cookies
+            fromUserName = "小王-默认";
+        }
+
+        // ======================== do websocket setup ===================
+        conn = new WebSocket("ws://" + wsAddress + "/ws");
+        conn.onopen = function (ev) {
+            appendMessage("<span class=\"badge badge-pill badge-success\">已连接</span><p></p>");
+            console.log(ev.toString());
+            // get room list
+            sendMessage({
+                type: 'ROOMS',
+            });
+        };
+        conn.onerror = function (ev) {
+            appendMessage("<span class=\"badge badge-pill badge-danger\">未连接: " +  ev.toString() + "</span>\n");
+            console.log(ev.toString());
+        };
+        conn.onmessage = function (evt) {
+            var message = JSON.parse(evt.data);
+            if (message.type === 'ROOMS') {
+                if (message.data.length) {
+                    rooms = JSON.parse(message.data);
+                    rooms.forEach(function (room) {
+                        // appendMessage("<b>"+ room.name + "</b> :" + JSON.stringify(room));
+                    });
+                    sendMessage({
+                        type: 'JOIN',
+                        room: rooms[0].id,
+                    });
+                }
+                return
+            }
+
+            if (message.type === 'JOIN') {
+                if (message.data) {
+                    roomId = message.data;
+                    var date = message.timestamp ? new Date(message.timestamp) : new Date();
+                    appendMessage("<b>" + date.toLocaleString() + "</b> : 加入了房间 " + message.data + "<br>");
+                } else {
+                    appendMessage("<b>加入失败</b>" + message.data);
+                }
+                return
+            }
+
+            if (message.data) {
+
+                var date = new Date(message.timestamp);
+                var text = "<b>" + date.toLocaleString() + "</b>: " + message.from + ": " + message.data + "<br>";
+                appendMessage(text);
+            } else {
+                console.error(JSON.stringify(evt));
+            }
+
+        };
+
+
+        function doSend() {
+            if (msgTextArea.value !== "") {
+                // contentArea.innerHTML += "<b>" + fromUserName + "</b>: " + msgTextArea.value + "<br>";
+                sendMessage({
+                    data: msgTextArea.value,
+                    type: 'MESSAGE',
+                });
+                msgTextArea.value = "";
+            }
+        }
+
+        btnSend.addEventListener("click", function () {
+            doSend();
+        });
+        msgTextArea.addEventListener('keyup', function (event) {
+            //check to see if the enter key was pressed
+            if (event.which === 13) {
+                //if so, run the addTask function
+                doSend();
+            }
+        });
+        inputName.addEventListener('keyup', function (event) {
+            if (event.which === 13) {
+                console.log(inputName.value);
+                fromUserName = inputName.value;
+                console.log(fromUserName);
+            }
+        });
+        inputName.addEventListener('blur', function (event) {
+            changeFromUserName();
+        });
+        inputIp.addEventListener('keyup', function (event) {
+            if (event.which === 13) {
+                if (inputIp.value !== "") {
+                    conn = new WebSocket("ws://" + inputIp.value + "/ws");
+                }
+            }
+        });
+        inputIp.addEventListener('blur', function (event) {
+            if (inputIp.value !== "") {
+                conn = new WebSocket("ws://" + inputIp.value + "/ws");
+            }
+        });
+
+    }
+
+</script>
+
+<body>
+<div class="container area-settings">
+    <div class="row">
+        <div class="card col-md-6 col-sm-6 offset-md-3">
+            <div class="row">
+                <div class="col-md-4 elm-margin-top">
+                    <input class="form-control" placeholder="服务器IP: localhost" id="input_ip">
+                </div>
+                <div class="col-md-4 elm-margin-top elm-margin-bottom">
+                    <input class="form-control" placeholder="我的名字" id="input_name">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container area-chat">
+    <div class="row">
+        <div class="card col-md-6 col-sm-6 offset-md-3">
+            <div class="card-body" id="content">
+                <h3>聊天</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container area-edit">
+    <div class="row">
+        <div class="col-md-4 col-sm-3 offset-md-3 elm-margin-top">
+            <textarea type="text" class="form-control" placeholder="说点啥" id="msgTextArea" wrap="soft"></textarea>
+        </div>
+        <div class="col-md-2 col-sm-3 elm-margin-top">
+            <button class="btn btn-primary btn-pill" id="send">
+                <i class="fa fa-send mr-2"></i>
+                发送
+            </button>
+        </div>
+    </div>
+</div>
+</body>
+</html>
