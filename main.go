@@ -11,12 +11,10 @@ import (
 	"gitlab.com/jinfagang/colorgo"
 	"net"
 	"fmt"
-	"./common"
 )
 
 func GetLocalIPAddr()  {
-	addr, err := net.InterfaceAddrs()
-	common.CheckError(err)
+	addr, _ := net.InterfaceAddrs()
 	for _, add := range addr {
 		if ipNet, ok := add.(*net.IPNet); ok && ! ipNet.IP.IsLoopback() {
 			if ipNet.IP.To4() != nil {
@@ -39,7 +37,7 @@ func main() {
 	flag.Parse()
 
 	cg.PrintlnGreen("=> Starting sparrow, serves all the messages...")
-	cg.PrintlnGreen("=> Now sparrow on serving.")
+	cg.PrintlnGreen("=> Now sparrow on serving. Listen to port: " + addr)
 	// get local ip, this can be add as local server
 	fmt.Println()
 	cg.PrintlnBlue("=> For local group chat, using local address below (one of them):")
